@@ -1,0 +1,11 @@
+{
+  "uuid": "%uuid%",
+  "name": "CustomTime",
+  "mainClass": "de.speznas.CustomTime",
+  "description": "Customize your Worldtime",
+  "version": 1,
+  "author": "tenbelow",
+  "category": 2,
+  "icon": "https://i.ibb.co/QJVj0Kc/download.png",
+  "transformerClass": "de.speznas.Transformer"
+}
