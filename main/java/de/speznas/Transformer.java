@@ -15,7 +15,7 @@ public class Transformer implements IClassTransformer
 {
 
     static boolean isObfuscated = LabyModCoreMod.isObfuscated();
-    private static String[] toTransform = {"bdb"};
+    private static String[] toTransform = {"bdb", "hu"};
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
@@ -34,7 +34,9 @@ public class Transformer implements IClassTransformer
 
             switch (index){
                 case 0: transformWorldClient(classNode);
-                break;
+                    break;
+                case 1: transformS03PacketTimeUpdate(classNode);
+                    break;
             }
 
             classNode.accept(classWriter);
@@ -46,6 +48,33 @@ public class Transformer implements IClassTransformer
 
         return basicClass;
     }
+
+    private static void transformS03PacketTimeUpdate(ClassNode classNode) {
+        final String processPacket = "a";
+        final String processPacketDesc = "(Lep;)V";
+
+        for(MethodNode methodNode : classNode.methods){
+            if(methodNode.name.equals(processPacket) && methodNode.desc.equals(processPacketDesc)){
+                AbstractInsnNode targetNode = null;
+                for(AbstractInsnNode instruction : methodNode.instructions.toArray()){
+                    if(instruction.getOpcode() == ALOAD && instruction.getNext().getOpcode() == ALOAD){
+                        targetNode = instruction;
+                    }
+                }
+                if(targetNode != null){
+                    InsnList toInsert = new InsnList();
+
+                    toInsert.add(new VarInsnNode(ALOAD, 0));
+                    toInsert.add(new FieldInsnNode(GETFIELD, "hu", "b", "J"));
+                    toInsert.add(new FieldInsnNode(PUTSTATIC, "de/speznas/CustomTime", "servertime", "J"));
+                    methodNode.instructions.insertBefore(targetNode, toInsert);
+                }
+            }
+        }
+    }
+
+
+
 
     private static void transformWorldClient(ClassNode classNode){
         final String setWorldTime = isObfuscated ? "b" : "setWorldTime";
@@ -59,10 +88,10 @@ public class Transformer implements IClassTransformer
                 AbstractInsnNode targetNode = null;
                 for(AbstractInsnNode instrunction : methodNode.instructions.toArray()){
                     if(instrunction.getOpcode() == ALOAD){
-                       if(((VarInsnNode)instrunction).var == 0 && instrunction.getNext().getOpcode() == LLOAD){
-                           targetNode = instrunction;
-                           break;
-                       }
+                        if(((VarInsnNode)instrunction).var == 0 && instrunction.getNext().getOpcode() == LLOAD){
+                            targetNode = instrunction;
+                            break;
+                        }
                     }
                 }
                 if(targetNode != null){
@@ -93,7 +122,7 @@ public class Transformer implements IClassTransformer
                 AbstractInsnNode targetNode = null;
                 for(AbstractInsnNode instrunction : methodNode.instructions.toArray()){
                     if(instrunction instanceof LdcInsnNode &&
-                    instrunction.getPrevious().getPrevious().getOpcode() == ALOAD){
+                            instrunction.getPrevious().getPrevious().getOpcode() == ALOAD){
 
                         targetNode = instrunction.getPrevious().getPrevious();
                     }
