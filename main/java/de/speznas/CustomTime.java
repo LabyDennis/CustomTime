@@ -6,7 +6,6 @@ import net.labymod.settings.elements.*;
 import net.labymod.utils.Consumer;
 import net.labymod.utils.Material;
 import net.minecraft.client.Minecraft;
-
 import java.util.List;
 
 public class CustomTime extends LabyModAddon {
@@ -14,6 +13,7 @@ public class CustomTime extends LabyModAddon {
     public static long time = 0;
     public static boolean CustomSpeedEnabled = false;
     public static int speed = 5;
+    public static long servertime = 0;
     public static String loopmode = "Custom";
 
     public static boolean getSpeedEnabled(){
@@ -23,6 +23,7 @@ public class CustomTime extends LabyModAddon {
     @Override
     public void onEnable() {
         this.getApi().registerForgeListener(this);
+        this.getApi().registerModule(new SimpleTimeModule());
     }
 
     @Override
