@@ -1,32 +1,34 @@
 package de.speznas;
 
+import net.labymod.core.asm.LabyModCoreMod;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.*;
-import net.labymod.core.asm.LabyModCoreMod;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.labymod.support.util.Debug.EnumDebugMode;
 import net.labymod.support.util.Debug;
-import static org.objectweb.asm.Opcodes.*;
 
 import java.util.Arrays;
+
+import static org.objectweb.asm.Opcodes.*;
 
 public class Transformer implements IClassTransformer
 {
 
     static boolean isObfuscated = LabyModCoreMod.isObfuscated();
     private static String[] toTransform = {"bdb", "hu"};
+    private static String[] toTransformForge = {"net.minecraft.client.multiplayer.WorldClient",
+            "net.minecraft.network.play.server.S03PacketTimeUpdate"};
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
-        int index = Arrays.asList(toTransform).indexOf(transformedName);
+        int index = isObfuscated ? Arrays.asList(toTransform).indexOf(transformedName) : Arrays.asList(toTransformForge).indexOf(transformedName);
         return index != -1 ?  transform(index, basicClass) : basicClass;
     }
 
     private static byte[] transform(int index, byte[] basicClass){
 
         try {
-
             ClassNode classNode = new ClassNode();
             ClassReader classReader = new ClassReader(basicClass);
             classReader.accept(classNode, 0);
@@ -35,7 +37,7 @@ public class Transformer implements IClassTransformer
             switch (index){
                 case 0: transformWorldClient(classNode);
                     break;
-                case 1: transformS03PacketTimeUpdate(classNode);
+                case 1: if(isObfuscated)transformS03PacketTimeUpdate(classNode);
                     break;
             }
 
@@ -50,8 +52,8 @@ public class Transformer implements IClassTransformer
     }
 
     private static void transformS03PacketTimeUpdate(ClassNode classNode) {
-        final String processPacket = "a";
-        final String processPacketDesc = "(Lep;)V";
+        final String processPacket = isObfuscated ? "a" : "processPacket";
+        final String processPacketDesc = isObfuscated ? "(Lep;)V" : "(Lnet/minecraft/network/INetHandler;)V";
 
         for(MethodNode methodNode : classNode.methods){
             if(methodNode.name.equals(processPacket) && methodNode.desc.equals(processPacketDesc)){
@@ -63,9 +65,8 @@ public class Transformer implements IClassTransformer
                 }
                 if(targetNode != null){
                     InsnList toInsert = new InsnList();
-
                     toInsert.add(new VarInsnNode(ALOAD, 0));
-                    toInsert.add(new FieldInsnNode(GETFIELD, "hu", "b", "J"));
+                    toInsert.add(new FieldInsnNode(GETFIELD, isObfuscated ? "hu" : "S03PacketTimeUpdate", isObfuscated ? "b" : "getWorldTime", "J"));
                     toInsert.add(new FieldInsnNode(PUTSTATIC, "de/speznas/CustomTime", "servertime", "J"));
                     methodNode.instructions.insertBefore(targetNode, toInsert);
                 }
@@ -105,10 +106,11 @@ public class Transformer implements IClassTransformer
                     LabelNode secondLabelNode = new LabelNode();
                     toInsert.add(new JumpInsnNode(GOTO, secondLabelNode));
                     toInsert.add(newLabelNode);
-                    toInsert.add(new FrameNode(F_SAME1, 0, null, 1, new Object[]{"adm"}));
+                    toInsert.add(new FrameNode(F_SAME1, 0, null, 1, new Object[]{isObfuscated ? "adm" : "World"}));
                     toInsert.add(new VarInsnNode(LLOAD, 1));
                     toInsert.add(secondLabelNode);
-                    toInsert.add(new FrameNode(F_FULL, 2, new Object[]{"bdb", LONG}, 2, new Object[]{"bdb", LONG}));
+                    toInsert.add(new FrameNode(F_FULL, 2, new Object[]{isObfuscated ? "bdb" : "WorldClient", LONG},
+                            2, new Object[]{isObfuscated ? "bdb" : "WorldClient", LONG}));
 
                     methodNode.instructions.insert(targetNode, toInsert);
 
