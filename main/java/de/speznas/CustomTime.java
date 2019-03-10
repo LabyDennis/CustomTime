@@ -1,11 +1,13 @@
 package de.speznas;
 
 import net.labymod.api.LabyModAddon;
+import net.labymod.core.asm.LabyModCoreMod;
 import net.labymod.gui.elements.DropDownMenu;
 import net.labymod.settings.elements.*;
 import net.labymod.utils.Consumer;
 import net.labymod.utils.Material;
 import net.minecraft.client.Minecraft;
+
 import java.util.List;
 
 public class CustomTime extends LabyModAddon {
@@ -23,7 +25,9 @@ public class CustomTime extends LabyModAddon {
     @Override
     public void onEnable() {
         this.getApi().registerForgeListener(this);
-        this.getApi().registerModule(new SimpleTimeModule());
+        if(LabyModCoreMod.isObfuscated()) {
+            this.getApi().registerModule(new SimpleTimeModule());
+        }
     }
 
     @Override
