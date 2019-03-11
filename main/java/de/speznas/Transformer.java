@@ -1,6 +1,5 @@
 package de.speznas;
 
-import net.labymod.core.asm.LabyModCoreMod;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.*;
@@ -15,19 +14,24 @@ import static org.objectweb.asm.Opcodes.*;
 public class Transformer implements IClassTransformer
 {
 
-    static boolean isObfuscated = LabyModCoreMod.isObfuscated();
+    static boolean isObfuscated = true;
     private static String[] toTransform = {"bdb", "hu"};
     private static String[] toTransformForge = {"net.minecraft.client.multiplayer.WorldClient",
             "net.minecraft.network.play.server.S03PacketTimeUpdate"};
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
+
+        if(transformedName.equals(toTransformForge[0])){
+            isObfuscated = false;
+        }
+
         int index = isObfuscated ? Arrays.asList(toTransform).indexOf(transformedName) : Arrays.asList(toTransformForge).indexOf(transformedName);
+
         return index != -1 ?  transform(index, basicClass) : basicClass;
     }
 
     private static byte[] transform(int index, byte[] basicClass){
-
         try {
             ClassNode classNode = new ClassNode();
             ClassReader classReader = new ClassReader(basicClass);
@@ -37,7 +41,7 @@ public class Transformer implements IClassTransformer
             switch (index){
                 case 0: transformWorldClient(classNode);
                     break;
-                case 1: if(isObfuscated)transformS03PacketTimeUpdate(classNode);
+                case 1: transformS03PacketTimeUpdate(classNode);
                     break;
             }
 
@@ -52,8 +56,8 @@ public class Transformer implements IClassTransformer
     }
 
     private static void transformS03PacketTimeUpdate(ClassNode classNode) {
-        final String processPacket = isObfuscated ? "a" : "processPacket";
-        final String processPacketDesc = isObfuscated ? "(Lep;)V" : "(Lnet/minecraft/network/INetHandler;)V";
+        final String processPacket = isObfuscated ? "a" : "a";
+        final String processPacketDesc = isObfuscated ? "(Lep;)V" : "(Lep;)V";
 
         for(MethodNode methodNode : classNode.methods){
             if(methodNode.name.equals(processPacket) && methodNode.desc.equals(processPacketDesc)){
@@ -66,9 +70,11 @@ public class Transformer implements IClassTransformer
                 if(targetNode != null){
                     InsnList toInsert = new InsnList();
                     toInsert.add(new VarInsnNode(ALOAD, 0));
-                    toInsert.add(new FieldInsnNode(GETFIELD, isObfuscated ? "hu" : "S03PacketTimeUpdate", isObfuscated ? "b" : "getWorldTime", "J"));
+                    toInsert.add(new FieldInsnNode(GETFIELD, isObfuscated ? "hu" : "hu", isObfuscated ? "b" : "b", "J"));
                     toInsert.add(new FieldInsnNode(PUTSTATIC, "de/speznas/CustomTime", "servertime", "J"));
                     methodNode.instructions.insertBefore(targetNode, toInsert);
+                }else {
+                    Debug.log(EnumDebugMode.ASM, "processPacket (a) wurde nicht gefunden!");
                 }
             }
         }
@@ -78,10 +84,10 @@ public class Transformer implements IClassTransformer
 
 
     private static void transformWorldClient(ClassNode classNode){
-        final String setWorldTime = isObfuscated ? "b" : "setWorldTime";
+        final String setWorldTime = isObfuscated ? "b" : "b";
         final String setWorldTimeDesc = isObfuscated ? "(J)V" : "(J)V";
 
-        final String tick = isObfuscated ? "c" : "tick";
+        final String tick = isObfuscated ? "c" : "c";
         final String tickDesc = isObfuscated ? "()V" : "()V";
 
         for(MethodNode methodNode : classNode.methods){
@@ -96,7 +102,6 @@ public class Transformer implements IClassTransformer
                     }
                 }
                 if(targetNode != null){
-
                     InsnList toInsert = new InsnList();
                     methodNode.instructions.remove(targetNode.getNext());
                     toInsert.add(new MethodInsnNode(INVOKESTATIC, "de/speznas/CustomTime", "getSpeedEnabled", "()Z", false));
